@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ArrowLeft, Plus, BookOpen, Clock, ChevronRight } from 'lucide-react';
 import { db, generateId } from '../db';
+import { addBook } from '../api/sync';
 import { todayStr } from '../utils/dateUtils';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
@@ -14,9 +15,9 @@ export default function Reading() {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ title: '', author: '', totalPages: '' });
 
-  const addBook = async () => {
+  const addBookFn = async () => {
     if (!form.title.trim()) return;
-    await db.books.add({
+    await addBook({
       id: generateId(),
       title: form.title.trim(),
       author: form.author.trim(),
@@ -162,7 +163,7 @@ export default function Reading() {
             value={form.totalPages}
             onChange={e => setForm({...form, totalPages: e.target.value})}
           />
-          <button onClick={addBook} className="btn-primary w-full">添加</button>
+          <button onClick={addBookFn} className="btn-primary w-full">添加</button>
         </div>
       </Modal>
     </div>

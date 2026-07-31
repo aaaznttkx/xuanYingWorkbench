@@ -1,11 +1,32 @@
-import { useState } from 'react';
-import { ArrowLeft, Database, Download, Upload, Trash2, Info } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, Database, Download, Upload, Trash2, Info, Cloud, CloudOff, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../db';
+import { getSyncStatus, getIsOnline, syncAll } from '../api/sync';
 
 export default function Settings() {
   const navigate = useNavigate();
   const [message, setMessage] = useState('');
+  const [syncStat, setSyncStat] = useState(getSyncStatus());
+  const online = getIsOnline();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSyncStat(getSyncStatus());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleSync = async () => {
+    setMessage('正在同步...');
+    try {
+      await syncAll();
+      setMessage('数据同步完成！');
+    } catch {
+      setMessage('同步失败，请检查网络连接');
+    }
+    setTimeout(() => setMessage(''), 3000);
+  };
 
   const exportData = async () => {
     try {
@@ -96,6 +117,36 @@ export default function Settings() {
       )}
 
       <div className="space-y-3">
+        {/* Cloud Sync Status */}
+        <div className="card">
+          <div className="flex items-center gap-3 mb-3">
+            {online ? <Cloud size={20} className="text-blue-500" /> : <CloudOff size={20} className="text-gray-400" />}
+            <span className="font-semibold text-gray-700">云同步</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full ml-auto ${
+              syncStat === 'syncing' ? 'bg-blue-50 text-blue-600' :
+              syncStat === 'error' ? 'bg-red-50 text-red-500' :
+              syncStat === 'offline' ? 'bg-gray-100 text-gray-500' :
+              'bg-green-50 text-green-600'
+            }`}>
+              {syncStat === 'syncing' ? '同步中...' :
+               syncStat === 'error' ? '同步失败' :
+               syncStat === 'offline' ? '离线' :
+               '已同步'}
+            </span>
+          </div>
+          <p className="text-xs text-gray-400 mb-3">
+            数据自动同步到 Vercel Postgres 云端数据库。离线时数据保存在本地，联网后自动同步。
+          </p>
+          <button
+            onClick={handleSync}
+            disabled={!online || syncStat === 'syncing'}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-50 text-blue-600 font-medium active:bg-blue-100 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw size={18} className={syncStat === 'syncing' ? 'animate-spin' : ''} />
+            手动同步数据
+          </button>
+        </div>
+
         <div className="card">
           <div className="flex items-center gap-3 mb-3">
             <Database size={20} className="text-primary-600" />
@@ -120,9 +171,9 @@ export default function Settings() {
           </div>
           <div className="text-sm text-gray-500 space-y-1">
             <p>📖 玄英拾光 - 个人成长工作台</p>
-            <p>📅 版本 1.0.0</p>
+            <p>📅 版本 2.0.0 (支持云同步)</p>
             <p>🌱 英语学习 · 读书笔记 · 运动打卡</p>
-            <p className="text-xs text-gray-400 mt-2">数据存储在浏览器本地，建议定期导出备份。</p>
+            <p className="text-xs text-gray-400 mt-2">数据同时存储在浏览器本地和 Vercel Postgres 云端，支持离线使用和自动同步。</p>
           </div>
         </div>
 

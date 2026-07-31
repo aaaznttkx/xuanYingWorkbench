@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Play, Pause, Check, X, Save } from 'lucide-react';
-import { db, generateId } from '../db';
+import { generateId } from '../db';
+import { addEnglishRecord } from '../api/sync';
 import { todayStr } from '../utils/dateUtils';
 
 const sampleMaterials = [
@@ -68,7 +69,7 @@ export default function Dictation() {
   const finishDictation = async () => {
     const correctCount = results.filter(r => r.correct).length;
     const score = Math.round((correctCount / results.length) * 100);
-    await db.englishRecords.add({
+    await addEnglishRecord({
       id: generateId(),
       type: 'dictation',
       date: todayStr(),

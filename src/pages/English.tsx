@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ArrowLeft, Headphones, Mic, BookMarked, AlertCircle, Plus, Clock } from 'lucide-react';
 import { db, generateId } from '../db';
+import { addEnglishRecord, deleteEnglishRecord } from '../api/sync';
 import { todayStr } from '../utils/dateUtils';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
@@ -32,7 +33,7 @@ export default function English() {
 
   const addRecord = async () => {
     if (!title.trim()) return;
-    await db.englishRecords.add({
+    await addEnglishRecord({
       id: generateId(),
       type: recordType as any,
       date: todayStr(),
@@ -47,7 +48,7 @@ export default function English() {
   };
 
   const deleteRecord = async (id: string) => {
-    await db.englishRecords.delete(id);
+    await deleteEnglishRecord(id);
   };
 
   const todayRecords = records.filter(r => r.date === todayStr());

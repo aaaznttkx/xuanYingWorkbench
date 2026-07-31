@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ArrowLeft, Plus, Clock, Trash2, Edit3 } from 'lucide-react';
 import { db, generateId } from '../db';
+import { addReadingNote, deleteReadingNote, updateBook } from '../api/sync';
 import { todayStr } from '../utils/dateUtils';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
@@ -32,7 +33,7 @@ export default function BookDetail() {
 
   const addNote = async (duration: number = 0) => {
     if (!noteForm.chapter.trim()) return;
-    await db.readingNotes.add({
+    await addReadingNote({
       id: generateId(),
       bookId: book.id,
       chapter: noteForm.chapter.trim(),
@@ -46,11 +47,11 @@ export default function BookDetail() {
   };
 
   const deleteNote = async (id: string) => {
-    await db.readingNotes.delete(id);
+    await deleteReadingNote(id);
   };
 
   const updateBookStatus = async (status: 'reading' | 'finished' | 'paused') => {
-    await db.books.update(book.id, { status, ...(status === 'finished' ? { finishedDate: todayStr() } : {}) });
+    await updateBook(book.id, { status, ...(status === 'finished' ? { finishedDate: todayStr() } : {}) });
   };
 
   const startTimer = () => {

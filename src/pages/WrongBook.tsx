@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ArrowLeft, Plus, AlertCircle, Check, Trash2, Search } from 'lucide-react';
 import { db, generateId } from '../db';
+import { addWrongQuestion, updateWrongQuestion, deleteWrongQuestion } from '../api/sync';
 import { todayStr } from '../utils/dateUtils';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
@@ -39,7 +40,7 @@ export default function WrongBook() {
 
   const addQuestion = async () => {
     if (!form.question.trim() || !form.answer.trim()) return;
-    await db.wrongQuestions.add({
+    await addWrongQuestion({
       id: generateId(),
       type: form.type as any,
       question: form.question.trim(),
@@ -54,11 +55,11 @@ export default function WrongBook() {
   };
 
   const toggleReviewed = async (id: string, reviewed: boolean) => {
-    await db.wrongQuestions.update(id, { reviewed: !reviewed });
+    await updateWrongQuestion(id, { reviewed: !reviewed });
   };
 
   const deleteQuestion = async (id: string) => {
-    await db.wrongQuestions.delete(id);
+    await deleteWrongQuestion(id);
   };
 
   const unreviewedCount = questions.filter(q => !q.reviewed).length;

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ArrowLeft, FileText, Dumbbell, BookOpen, Languages, ChevronRight, Sparkles } from 'lucide-react';
 import { db, generateId } from '../db';
+import { addWeeklyReport } from '../api/sync';
 import { getWeekRange } from '../utils/dateUtils';
 import { format, parseISO, startOfWeek, endOfWeek, subWeeks, addWeeks } from 'date-fns';
 import Modal from '../components/Modal';
@@ -61,7 +62,7 @@ export default function Report() {
       generatedAt: new Date().toISOString(),
     };
 
-    await db.weeklyReports.add(report);
+    await addWeeklyReport(report);
     setGeneratedReport(report);
     setShowReport(true);
   };

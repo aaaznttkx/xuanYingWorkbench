@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ArrowLeft, Plus, Search, Check, BookMarked, Trash2, RefreshCw } from 'lucide-react';
 import { db, generateId } from '../db';
+import { addWord as syncAddWord, updateWord as syncUpdateWord, deleteWord as syncDeleteWord } from '../api/sync';
 import { todayStr } from '../utils/dateUtils';
 import Modal from '../components/Modal';
 import EmptyState from '../components/EmptyState';
@@ -50,7 +51,7 @@ export default function Vocabulary() {
 
   const addWord = async () => {
     if (!newWord.word.trim() || !newWord.meaning.trim()) return;
-    await db.words.add({
+    await syncAddWord({
       id: generateId(),
       word: newWord.word.trim(),
       meaning: newWord.meaning.trim(),
@@ -68,7 +69,7 @@ export default function Vocabulary() {
     for (const w of sampleWords) {
       const exists = await db.words.where('word').equals(w.word).first();
       if (!exists) {
-        await db.words.add({
+        await syncAddWord({
           id: generateId(),
           ...w,
           example: '',
@@ -81,7 +82,7 @@ export default function Vocabulary() {
   };
 
   const toggleMastered = async (id: string, current: boolean) => {
-    await db.words.update(id, {
+    await syncUpdateWord(id, {
       mastered: !current,
       reviewCount: 0,
       lastReviewDate: todayStr(),
@@ -89,14 +90,14 @@ export default function Vocabulary() {
   };
 
   const reviewWord = async (id: string, count: number) => {
-    await db.words.update(id, {
+    await syncUpdateWord(id, {
       reviewCount: count + 1,
       lastReviewDate: todayStr(),
     });
   };
 
   const deleteWord = async (id: string) => {
-    await db.words.delete(id);
+    await syncDeleteWord(id);
   };
 
   const masteredCount = words.filter(w => w.mastered).length;

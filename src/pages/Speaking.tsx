@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Mic, MicOff, RotateCcw, Sparkles, Volume2 } from 'lucide-react';
-import { db, generateId } from '../db';
+import { generateId } from '../db';
+import { addEnglishRecord } from '../api/sync';
 import { todayStr } from '../utils/dateUtils';
 
 interface ScoreDetail {
@@ -105,7 +106,7 @@ export default function Speaking() {
     setScore(result);
     setIsAnalyzing(false);
 
-    await db.englishRecords.add({
+    await addEnglishRecord({
       id: generateId(),
       type: 'speaking',
       date: todayStr(),

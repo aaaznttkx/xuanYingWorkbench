@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ArrowLeft, Plus, Dumbbell, Flame, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { db, generateId } from '../db';
+import { addSportRecord, deleteSportRecord } from '../api/sync';
 import { todayStr, getMonthStats, getMonthDays, formatDate } from '../utils/dateUtils';
 import type { SportType } from '../types';
 import Modal from '../components/Modal';
@@ -40,7 +41,7 @@ export default function Sports() {
   }));
 
   const addRecord = async () => {
-    await db.sportRecords.add({
+    await addSportRecord({
       id: generateId(),
       type: form.type,
       duration: form.duration,
@@ -53,7 +54,7 @@ export default function Sports() {
   };
 
   const deleteRecord = async (id: string) => {
-    await db.sportRecords.delete(id);
+    await deleteSportRecord(id);
   };
 
   // Sport type distribution for current month
