@@ -1,4 +1,4 @@
-import { sql } from './db';
+import { sql } from './db.js';
 
 export default async function handler(req: Request): Promise<Response> {
   const url = new URL(req.url);
