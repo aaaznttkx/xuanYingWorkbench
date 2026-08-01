@@ -4,6 +4,7 @@ import { ArrowLeft, Mic, MicOff, RotateCcw, Sparkles, Volume2 } from 'lucide-rea
 import { generateId } from '../db';
 import { addEnglishRecord } from '../api/sync';
 import { todayStr } from '../utils/dateUtils';
+import useSpeech from '../hooks/useSpeech';
 
 interface ScoreDetail {
   fluency: number;
@@ -64,6 +65,8 @@ export default function Speaking() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
+  const { speak } = useSpeech();
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -121,16 +124,6 @@ export default function Speaking() {
       },
       notes: result.feedback,
     });
-  };
-
-  const speak = (text: string) => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'en-US';
-      utterance.rate = 0.8;
-      window.speechSynthesis.speak(utterance);
-    }
   };
 
   const ScoreBar = ({ label, value, color }: { label: string; value: number; color: string }) => (

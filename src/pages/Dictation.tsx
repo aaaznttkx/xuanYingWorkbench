@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, Pause, Check, X, Save } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Check, X, Save, RefreshCw } from 'lucide-react';
 import { generateId } from '../db';
 import { addEnglishRecord } from '../api/sync';
 import { todayStr } from '../utils/dateUtils';
+import useSpeech from '../hooks/useSpeech';
 
 const sampleMaterials = [
   { id: '1', title: '四级听力 - 校园对话', sentences: [
@@ -28,24 +29,21 @@ const sampleMaterials = [
 
 export default function Dictation() {
   const navigate = useNavigate();
+  const { isPlaying, error: speechError, speak, cancel } = useSpeech();
+
   const [selectedMaterial, setSelectedMaterial] = useState(sampleMaterials[0]);
   const [currentSentence, setCurrentSentence] = useState(0);
   const [userInput, setUserInput] = useState('');
   const [showAnswer, setShowAnswer] = useState(false);
   const [results, setResults] = useState<{sentence: string; user: string; correct: boolean}[]>([]);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [customText, setCustomText] = useState('');
   const [showCustom, setShowCustom] = useState(false);
 
-  const speak = (text: string) => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'en-US';
-      utterance.rate = 0.85;
-      setIsPlaying(true);
-      utterance.onend = () => setIsPlaying(false);
-      window.speechSynthesis.speak(utterance);
+  const handleSpeak = () => {
+    if (isPlaying) {
+      cancel();
+    } else {
+      speak(selectedMaterial.sentences[currentSentence]);
     }
   };
 
@@ -142,14 +140,29 @@ export default function Dictation() {
               第 {currentSentence + 1} / {selectedMaterial.sentences.length} 句
             </p>
             <button
-              onClick={() => speak(selectedMaterial.sentences[currentSentence])}
+              onClick={handleSpeak}
               className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 transition-all ${
                 isPlaying ? 'bg-blue-100 text-blue-500 scale-110' : 'bg-blue-500 text-white'
               }`}
             >
               {isPlaying ? <Pause size={28} /> : <Play size={28} className="ml-1" />}
             </button>
-            <p className="text-xs text-gray-400">点击播放，逐句听写</p>
+            <p className="text-xs text-gray-400">
+              {isPlaying ? '正在播放...' : '点击播放，逐句听写'}
+            </p>
+
+            {/* Speech error with retry */}
+            {speechError && (
+              <div className="mt-3 flex items-center justify-center gap-2 text-sm text-orange-600 bg-orange-50 rounded-lg px-3 py-2">
+                <span>{speechError}</span>
+                <button
+                  onClick={handleSpeak}
+                  className="flex items-center gap-1 text-orange-700 font-medium underline"
+                >
+                  <RefreshCw size={14} /> 重试
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="mb-4">
