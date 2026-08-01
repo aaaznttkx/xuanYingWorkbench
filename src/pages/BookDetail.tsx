@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ArrowLeft, Plus, Clock, Trash2, Edit3 } from 'lucide-react';
+import { ArrowLeft, Plus, Clock, Trash2, Edit3, Sparkles } from 'lucide-react';
 import { db, generateId } from '../db';
 import { addReadingNote, deleteReadingNote, updateBook } from '../api/sync';
 import { todayStr } from '../utils/dateUtils';
@@ -20,6 +20,12 @@ export default function BookDetail() {
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [timerInterval, setTimerInterval] = useState<ReturnType<typeof setInterval> | null>(null);
   const [noteForm, setNoteForm] = useState({ chapter: '', keyPoints: '', reflection: '' });
+
+  // AI Format state
+  const [rawText, setRawText] = useState('');
+  const [showAI, setShowAI] = useState(false);
+  const [isFormatting, setIsFormatting] = useState(false);
+  const [aiError, setAiError] = useState('');
 
   if (!book) {
     return (
@@ -43,6 +49,8 @@ export default function BookDetail() {
       date: todayStr(),
     });
     setNoteForm({ chapter: '', keyPoints: '', reflection: '' });
+    setRawText('');
+    setShowAI(false);
     setShowAdd(false);
   };
 
@@ -77,6 +85,34 @@ export default function BookDetail() {
     const m = Math.floor(s / 60);
     const sec = s % 60;
     return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+  };
+
+  const handleAIFormat = async () => {
+    if (!rawText.trim()) return;
+    setIsFormatting(true);
+    setAiError('');
+    try {
+      const res = await fetch('/api/ai-format', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rawText: rawText.trim(), bookTitle: book.title }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: '请求失败' }));
+        throw new Error(err.error || 'AI 整理失败');
+      }
+      const data = await res.json();
+      setNoteForm({
+        chapter: data.chapter || '',
+        keyPoints: data.keyPoints || '',
+        reflection: data.reflection || '',
+      });
+      setShowAI(false);
+    } catch (err: any) {
+      setAiError(err.message || '整理失败，请重试');
+    } finally {
+      setIsFormatting(false);
+    }
   };
 
   return (
@@ -154,13 +190,13 @@ export default function BookDetail() {
               {note.keyPoints && (
                 <div className="mb-2 p-3 bg-blue-50 rounded-xl">
                   <p className="text-xs font-medium text-blue-500 mb-1">💡 核心观点</p>
-                  <p className="text-sm text-gray-700">{note.keyPoints}</p>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{note.keyPoints}</p>
                 </div>
               )}
               {note.reflection && (
                 <div className="p-3 bg-green-50 rounded-xl">
                   <p className="text-xs font-medium text-green-500 mb-1">📝 我的感悟</p>
-                  <p className="text-sm text-gray-700">{note.reflection}</p>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{note.reflection}</p>
                 </div>
               )}
             </div>
@@ -188,8 +224,63 @@ export default function BookDetail() {
       )}
 
       {/* Add Note Modal */}
-      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="写读书笔记">
+      <Modal isOpen={showAdd} onClose={() => { setShowAdd(false); setShowAI(false); setRawText(''); }} title="写读书笔记">
         <div className="space-y-3">
+          {/* AI Format Section */}
+          {!showAI ? (
+            <button
+              onClick={() => setShowAI(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-50 to-violet-50 text-purple-600 font-medium text-sm border border-purple-100 active:bg-purple-100 transition-colors"
+            >
+              <Sparkles size={18} />
+              AI 智能整理笔记
+            </button>
+          ) : (
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-100">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-purple-700 flex items-center gap-1.5">
+                  <Sparkles size={16} /> AI 智能整理
+                </span>
+                <button
+                  onClick={() => { setShowAI(false); setAiError(''); }}
+                  className="text-xs text-purple-400 underline"
+                >
+                  收起
+                </button>
+              </div>
+              <p className="text-xs text-purple-400 mb-3">
+                粘贴你的阅读心得，AI 自动整理为结构化笔记
+              </p>
+              <textarea
+                className="input-field min-h-[120px] mb-3"
+                placeholder={`读完《${book.title || '书籍'}》这一章的感受...\n\n可以写下：\n- 本章讲什么内容\n- 有哪些印象深刻的地方\n- 你产生的联想和思考`}
+                value={rawText}
+                onChange={e => setRawText(e.target.value)}
+              />
+              {aiError && (
+                <p className="text-xs text-red-500 mb-2">{aiError}</p>
+              )}
+              <button
+                onClick={handleAIFormat}
+                disabled={!rawText.trim() || isFormatting}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-purple-500 text-white text-sm font-medium disabled:opacity-50 active:bg-purple-600 transition-colors"
+                style={{ background: isFormatting ? undefined : '#8B5CF6' }}
+              >
+                {isFormatting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    AI 正在整理...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={16} /> 开始整理
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Note Form Fields */}
           <div>
             <label className="text-sm font-medium text-gray-600 mb-1 block">章节</label>
             <input
