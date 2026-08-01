@@ -13,22 +13,21 @@
 html, body {
   margin: 0;
   padding: 0;
-  height: 100%;
+  min-height: 100%;
   overflow-x: hidden;
+  background: #F1F8E9;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
 }
 
 #root {
-  min-height: 100%;
-  display: flex;
-  justify-content: center;
-  background: #F1F8E9;
+  min-height: 100vh;
+  background: #fff;
 }
 
 .mobile-container {
-  width: 100%;
   max-width: 480px;
-  min-height: 100%;
+  margin: 0 auto;
+  min-height: 100vh;
   background: #fff;
   box-shadow: 0 0 30px rgba(0,0,0,0.05);
   position: relative;
