@@ -24,14 +24,24 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-t-3xl sm:rounded-3xl w-full sm:max-w-[420px] max-h-[85vh] overflow-y-auto animate-slide-up p-5">
-        <div className="flex items-center justify-between mb-4">
+      <div className="relative bg-white rounded-t-3xl sm:rounded-3xl w-full sm:max-w-[420px] max-h-[90dvh] flex flex-col animate-slide-up overflow-hidden">
+        {/* 标题栏：固定顶部，不随内容滚动 */}
+        <div className="flex items-center justify-between p-5 pb-3 flex-shrink-0 border-b border-gray-50">
           <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center">
+          <button onClick={onClose} className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center active:bg-gray-100">
             <X size={18} className="text-gray-500" />
           </button>
         </div>
-        {children}
+        {/* 内容区：独立滚动，底部留出安全区避免被 home indicator 遮挡 */}
+        <div
+          className="flex-1 overflow-y-auto px-5 pt-4"
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))',
+          }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );
