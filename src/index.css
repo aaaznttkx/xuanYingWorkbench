@@ -128,8 +128,13 @@ textarea.input-field {
   animation: slideUp 0.4s ease-out;
 }
 
-/* 弹窗最大高度：vh 作为兜底，dvh 支持时覆盖（动态适应移动端地址栏） */
+/* 弹窗最大高度：vh 兜底（所有浏览器支持），dvh 支持时覆盖（动态适应地址栏）。
+   不能用两条 max-height 叠写做回退——CSS 压缩器会删掉前一条。用 @supports 隔离。 */
 .modal-max-height {
   max-height: 85vh;
-  max-height: 85dvh;
+}
+@supports (height: 1dvh) {
+  .modal-max-height {
+    max-height: 85dvh;
+  }
 }
