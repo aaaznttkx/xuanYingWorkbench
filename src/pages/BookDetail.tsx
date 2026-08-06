@@ -274,6 +274,28 @@ export default function BookDetail() {
         isOpen={showAI}
         onClose={closeAIModal}
         title={aiResult ? '整理结果预览' : 'AI 智能整理笔记'}
+        footer={
+          !aiResult ? (
+            <button
+              onClick={handleAIFormat}
+              disabled={!rawText.trim() || isFormatting}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-purple-500 text-white text-sm font-medium disabled:opacity-50 active:bg-purple-600 transition-colors"
+            >
+              {isFormatting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  AI 正在整理...
+                </>
+              ) : (
+                <>
+                  <Sparkles size={16} /> 开始整理
+                </>
+              )}
+            </button>
+          ) : (
+            <button onClick={() => saveNote(pendingDuration)} className="btn-primary w-full">保存笔记</button>
+          )
+        }
       >
         {pendingDuration > 0 && (
           <div className="mb-3 px-3 py-2 bg-purple-50 rounded-xl text-xs text-purple-600 flex items-center gap-1.5">
@@ -300,22 +322,6 @@ export default function BookDetail() {
               onChange={e => setRawText(e.target.value)}
             />
             {aiError && <p className="text-xs text-red-500">{aiError}</p>}
-            <button
-              onClick={handleAIFormat}
-              disabled={!rawText.trim() || isFormatting}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-purple-500 text-white text-sm font-medium disabled:opacity-50 active:bg-purple-600 transition-colors"
-            >
-              {isFormatting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  AI 正在整理...
-                </>
-              ) : (
-                <>
-                  <Sparkles size={16} /> 开始整理
-                </>
-              )}
-            </button>
           </div>
         ) : (
           /* 阶段二：预览并编辑整理结果 */
@@ -359,13 +365,17 @@ export default function BookDetail() {
                 onChange={e => setNoteForm({ ...noteForm, reflection: e.target.value })}
               />
             </div>
-            <button onClick={() => saveNote(pendingDuration)} className="btn-primary w-full">保存笔记</button>
           </div>
         )}
       </Modal>
 
       {/* 手动写笔记 Modal */}
-      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="手动写笔记">
+      <Modal
+        isOpen={showAdd}
+        onClose={() => setShowAdd(false)}
+        title="手动写笔记"
+        footer={<button onClick={() => saveNote(0)} className="btn-primary w-full">保存笔记</button>}
+      >
         <div className="space-y-3">
           <div>
             <label className="text-sm font-medium text-gray-600 mb-1 block">章节</label>
@@ -396,7 +406,6 @@ export default function BookDetail() {
               onChange={e => setNoteForm({ ...noteForm, reflection: e.target.value })}
             />
           </div>
-          <button onClick={() => saveNote(0)} className="btn-primary w-full">保存笔记</button>
         </div>
       </Modal>
     </div>

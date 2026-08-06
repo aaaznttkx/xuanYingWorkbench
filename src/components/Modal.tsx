@@ -7,9 +7,11 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  /** 固定在弹窗底部的操作区（如保存按钮），不随内容滚动，始终可见可点 */
+  footer?: ReactNode;
 }
 
-export default function Modal({ isOpen, onClose, title, children }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, footer }: ModalProps) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -32,16 +34,25 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
             <X size={18} className="text-gray-500" />
           </button>
         </div>
-        {/* 内容区：独立滚动，底部留出安全区避免被 home indicator 遮挡 */}
+        {/* 内容区：独立滚动。min-h-0 是关键——让 flex 子项可收缩，overflow-y-auto 才会生效 */}
         <div
-          className="flex-1 overflow-y-auto px-5 pt-4"
+          className="flex-1 min-h-0 overflow-y-auto px-5 pt-4"
           style={{
             WebkitOverflowScrolling: 'touch',
-            paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))',
+            paddingBottom: footer ? '1rem' : 'calc(1.25rem + env(safe-area-inset-bottom))',
           }}
         >
           {children}
         </div>
+        {/* 底部操作区：固定底部，主操作按钮始终可见可点，带安全区避免被 home indicator 遮挡 */}
+        {footer && (
+          <div
+            className="flex-shrink-0 px-5 pt-3 border-t border-gray-50 bg-white"
+            style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+          >
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );
