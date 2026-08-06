@@ -11,6 +11,9 @@ interface ModalProps {
   footer?: ReactNode;
 }
 
+// 全屏弹窗：标题固定顶部 + 内容独立滚动 + footer 钉在屏幕最底部。
+// 全部用内联样式，不依赖任何 CSS 类，免疫缓存/构建差异，保证各浏览器一致。
+// 全屏布局下 footer 位于 flex 列最底部 = 屏幕底部，物理上不可能被挤出可视区。
 export default function Modal({ isOpen, onClose, title, children, footer }: ModalProps) {
   useEffect(() => {
     if (isOpen) {
@@ -23,51 +26,84 @@ export default function Modal({ isOpen, onClose, title, children, footer }: Moda
 
   if (!isOpen) return null;
 
-  // 关键布局用内联样式：内联样式在 JS bundle 里，不受独立 CSS 文件缓存影响，保证各浏览器一致生效。
-  // maxHeight 用 85vh（所有浏览器支持）；flex 列布局让标题固定、内容滚动、footer 固定底部。
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
-      style={{ WebkitOverflowScrolling: 'touch' }}
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        background: 'rgba(0,0,0,0.4)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'stretch',
+        justifyContent: 'flex-end',
+      }}
     >
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div
-        className="relative bg-white rounded-t-3xl sm:rounded-3xl w-full sm:max-w-[420px] animate-slide-up"
+        onClick={e => e.stopPropagation()}
         style={{
-          maxHeight: '85vh',
+          position: 'relative',
+          background: '#fff',
+          width: '100%',
+          maxWidth: 480,
+          margin: '0 auto',
+          // 占满剩余高度（flex 列 + stretch），形成全屏/近全屏弹窗
+          flex: 1,
+          minHeight: 0,
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
         }}
       >
-        {/* 标题栏：固定顶部，不随内容滚动 */}
+        {/* 标题栏：固定顶部 */}
         <div
-          className="flex items-center justify-between p-5 pb-3 border-b border-gray-50"
-          style={{ flexShrink: 0 }}
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '16px 20px 12px',
+            borderBottom: '1px solid #f5f5f5',
+          }}
         >
-          <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center active:bg-gray-100">
-            <X size={18} className="text-gray-500" />
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: '#1f2937', margin: 0 }}>{title}</h2>
+          <button
+            onClick={onClose}
+            style={{
+              width: 32, height: 32, borderRadius: 8, background: '#f3f4f6', border: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+            }}
+          >
+            <X size={18} color="#6b7280" />
           </button>
         </div>
-        {/* 内容区：独立滚动。minHeight:0 让 flex 子项可收缩，overflowY:auto 才会生效 */}
+
+        {/* 内容区：独立滚动 */}
         <div
-          className="px-5 pt-4"
           style={{
             flex: 1,
             minHeight: 0,
             overflowY: 'auto',
             WebkitOverflowScrolling: 'touch',
-            paddingBottom: footer ? '1rem' : 'calc(1.25rem + env(safe-area-inset-bottom))',
+            padding: '16px 20px',
+            paddingBottom: footer ? 16 : 'calc(20px + env(safe-area-inset-bottom))',
           }}
         >
           {children}
         </div>
-        {/* 底部操作区：固定底部，主操作按钮始终可见可点，带安全区避免被 home indicator 遮挡 */}
+
+        {/* 底部操作区：钉在弹窗最底部 = 屏幕底部，始终可见可点 */}
         {footer && (
           <div
-            className="px-5 pt-3 border-t border-gray-50 bg-white"
-            style={{ flexShrink: 0, paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+            style={{
+              flexShrink: 0,
+              padding: '12px 20px calc(12px + env(safe-area-inset-bottom))',
+              borderTop: '1px solid #f5f5f5',
+              background: '#fff',
+            }}
           >
             {footer}
           </div>
