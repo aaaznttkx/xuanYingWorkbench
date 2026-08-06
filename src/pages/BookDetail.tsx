@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ArrowLeft, Plus, Clock, Trash2, Edit3, Sparkles } from 'lucide-react';
+import { ArrowLeft, Plus, Clock, Trash2, Edit3, Sparkles, Lightbulb, Heart, ChevronRight } from 'lucide-react';
 import { db, generateId } from '../db';
 import { addReadingNote, deleteReadingNote, updateBook } from '../api/sync';
 import { todayStr } from '../utils/dateUtils';
@@ -14,18 +14,21 @@ export default function BookDetail() {
   const book = useLiveQuery(() => db.books.get(bookId || ''), [bookId]);
   const notes = useLiveQuery(() => db.readingNotes.where('bookId').equals(bookId || '').reverse().sortBy('date'), [bookId]) || [];
 
-  const [showAdd, setShowAdd] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);          // 手动写笔记
+  const [showAI, setShowAI] = useState(false);            // AI 智能整理（独立入口）
   const [showTimer, setShowTimer] = useState(false);
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [timerInterval, setTimerInterval] = useState<ReturnType<typeof setInterval> | null>(null);
   const [noteForm, setNoteForm] = useState({ chapter: '', keyPoints: '', reflection: '' });
+  const [pendingDuration, setPendingDuration] = useState(0);
 
   // AI Format state
   const [rawText, setRawText] = useState('');
-  const [showAI, setShowAI] = useState(false);
   const [isFormatting, setIsFormatting] = useState(false);
   const [aiError, setAiError] = useState('');
+  // 整理结果预览：null 表示还在输入阶段，有值表示进入预览编辑阶段
+  const [aiResult, setAiResult] = useState<{ chapter: string; keyPoints: string; reflection: string } | null>(null);
 
   if (!book) {
     return (
@@ -37,7 +40,7 @@ export default function BookDetail() {
 
   const totalDuration = notes.reduce((s, n) => s + n.duration, 0);
 
-  const addNote = async (duration: number = 0) => {
+  const saveNote = async (duration: number = 0) => {
     if (!noteForm.chapter.trim()) return;
     await addReadingNote({
       id: generateId(),
@@ -49,9 +52,11 @@ export default function BookDetail() {
       date: todayStr(),
     });
     setNoteForm({ chapter: '', keyPoints: '', reflection: '' });
+    setAiResult(null);
     setRawText('');
-    setShowAI(false);
     setShowAdd(false);
+    setShowAI(false);
+    setPendingDuration(0);
   };
 
   const deleteNote = async (id: string) => {
@@ -77,7 +82,9 @@ export default function BookDetail() {
     setTimerSeconds(0);
     setShowTimer(false);
     if (minutes > 0) {
-      setShowAdd(true);
+      // 计时结束后直接进入 AI 整理，带上时长
+      setPendingDuration(minutes);
+      setShowAI(true);
     }
   };
 
@@ -102,17 +109,32 @@ export default function BookDetail() {
         throw new Error(err.error || 'AI 整理失败');
       }
       const data = await res.json();
-      setNoteForm({
-        chapter: data.chapter || '',
+      const result = {
+        chapter: data.chapter || '阅读笔记',
         keyPoints: data.keyPoints || '',
         reflection: data.reflection || '',
-      });
-      setShowAI(false);
+      };
+      setAiResult(result);
+      setNoteForm(result);
     } catch (err: any) {
       setAiError(err.message || '整理失败，请重试');
     } finally {
       setIsFormatting(false);
     }
+  };
+
+  // 重置 AI 整理弹窗到输入阶段
+  const resetAIFlow = () => {
+    setAiResult(null);
+    setNoteForm({ chapter: '', keyPoints: '', reflection: '' });
+    setRawText('');
+    setAiError('');
+  };
+
+  const closeAIModal = () => {
+    setShowAI(false);
+    resetAIFlow();
+    setPendingDuration(0);
   };
 
   return (
@@ -139,7 +161,7 @@ export default function BookDetail() {
               <Clock size={16} /> 计时
             </button>
             <button onClick={() => setShowAdd(true)} className="flex items-center gap-1 px-3 py-2 bg-primary-50 text-primary-600 rounded-xl text-sm font-medium">
-              <Plus size={16} /> 笔记
+              <Plus size={16} /> 手动
             </button>
           </div>
         </div>
@@ -160,6 +182,23 @@ export default function BookDetail() {
         </div>
       </div>
 
+      {/* AI 智能整理快捷入口 —— 沿用阅读模块紫色渐变，与 Reading 列表页今日卡片一致 */}
+      <button
+        onClick={() => setShowAI(true)}
+        className="card w-full text-left mb-4 bg-gradient-to-r from-purple-500 to-purple-600 active:scale-[0.99] transition-transform"
+      >
+        <div className="flex items-center gap-3 text-white">
+          <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+            <Sparkles size={22} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm">AI 智能整理笔记</p>
+            <p className="text-xs text-purple-100 mt-0.5">读完一章？把心得发给我，自动整理为结构化笔记</p>
+          </div>
+          <ChevronRight size={18} className="text-white/70 flex-shrink-0" />
+        </div>
+      </button>
+
       {/* Notes List */}
       <h2 className="text-base font-semibold text-gray-700 mb-3">读书笔记 ({notes.length})</h2>
 
@@ -167,36 +206,43 @@ export default function BookDetail() {
         <EmptyState
           icon={<Edit3 size={32} />}
           title="还没有笔记"
-          description="开始记录你的阅读心得"
+          description="读完一章后，把心得交给 AI 整理成结构化笔记"
           action={
-            <button onClick={() => setShowAdd(true)} className="btn-primary text-sm">写笔记</button>
+            <button onClick={() => setShowAI(true)} className="btn-primary text-sm">开始整理笔记</button>
           }
         />
       ) : (
         <div className="space-y-3">
           {notes.map(note => (
             <div key={note.id} className="card">
+              {/* 章节标题行 */}
               <div className="flex items-start justify-between mb-2">
-                <div>
-                  <span className="inline-block px-2 py-0.5 bg-purple-50 text-purple-600 rounded text-xs font-medium">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="inline-block px-2 py-0.5 bg-purple-50 text-purple-600 rounded text-xs font-medium flex-shrink-0">
                     {note.chapter}
                   </span>
-                  <span className="text-xs text-gray-400 ml-2">{note.date} · {note.duration}分钟</span>
+                  <span className="text-xs text-gray-400 truncate">{note.date} · {note.duration}分钟</span>
                 </div>
-                <button onClick={() => deleteNote(note.id)} className="text-gray-300 hover:text-red-400">
+                <button onClick={() => deleteNote(note.id)} className="text-gray-300 hover:text-red-400 flex-shrink-0 ml-2">
                   <Trash2 size={16} />
                 </button>
               </div>
+              {/* 核心观点 */}
               {note.keyPoints && (
                 <div className="mb-2 p-3 bg-blue-50 rounded-xl">
-                  <p className="text-xs font-medium text-blue-500 mb-1">💡 核心观点</p>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{note.keyPoints}</p>
+                  <p className="text-xs font-medium text-blue-500 mb-1 flex items-center gap-1">
+                    <Lightbulb size={13} /> 核心观点
+                  </p>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{note.keyPoints}</p>
                 </div>
               )}
+              {/* 我的感悟 */}
               {note.reflection && (
                 <div className="p-3 bg-green-50 rounded-xl">
-                  <p className="text-xs font-medium text-green-500 mb-1">📝 我的感悟</p>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{note.reflection}</p>
+                  <p className="text-xs font-medium text-green-500 mb-1 flex items-center gap-1">
+                    <Heart size={13} /> 我的感悟
+                  </p>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{note.reflection}</p>
                 </div>
               )}
             </div>
@@ -214,7 +260,7 @@ export default function BookDetail() {
             {!timerRunning ? (
               <div className="flex gap-3">
                 <button onClick={() => setShowTimer(false)} className="btn-outline flex-1">取消</button>
-                <button onClick={startTimer} className="btn-primary flex-1" style={{background: '#7C3AED'}}>开始</button>
+                <button onClick={startTimer} className="btn-primary flex-1">开始</button>
               </div>
             ) : (
               <button onClick={stopTimerAndSave} className="btn-primary w-full bg-red-500">结束阅读</button>
@@ -223,71 +269,111 @@ export default function BookDetail() {
         </div>
       )}
 
-      {/* Add Note Modal */}
-      <Modal isOpen={showAdd} onClose={() => { setShowAdd(false); setShowAI(false); setRawText(''); }} title="写读书笔记">
-        <div className="space-y-3">
-          {/* AI Format Section */}
-          {!showAI ? (
-            <button
-              onClick={() => setShowAI(true)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-50 to-violet-50 text-purple-600 font-medium text-sm border border-purple-100 active:bg-purple-100 transition-colors"
-            >
-              <Sparkles size={18} />
-              AI 智能整理笔记
-            </button>
-          ) : (
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-100">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-purple-700 flex items-center gap-1.5">
-                  <Sparkles size={16} /> AI 智能整理
-                </span>
-                <button
-                  onClick={() => { setShowAI(false); setAiError(''); }}
-                  className="text-xs text-purple-400 underline"
-                >
-                  收起
-                </button>
-              </div>
-              <p className="text-xs text-purple-400 mb-3">
-                粘贴你的阅读心得，AI 自动整理为结构化笔记
-              </p>
-              <textarea
-                className="input-field min-h-[120px] mb-3"
-                placeholder={`读完《${book.title || '书籍'}》这一章的感受...\n\n可以写下：\n- 本章讲什么内容\n- 有哪些印象深刻的地方\n- 你产生的联想和思考`}
-                value={rawText}
-                onChange={e => setRawText(e.target.value)}
-              />
-              {aiError && (
-                <p className="text-xs text-red-500 mb-2">{aiError}</p>
-              )}
-              <button
-                onClick={handleAIFormat}
-                disabled={!rawText.trim() || isFormatting}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-purple-500 text-white text-sm font-medium disabled:opacity-50 active:bg-purple-600 transition-colors"
-                style={{ background: isFormatting ? undefined : '#8B5CF6' }}
-              >
-                {isFormatting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    AI 正在整理...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={16} /> 开始整理
-                  </>
-                )}
-              </button>
-            </div>
-          )}
+      {/* AI 智能整理 Modal —— 独立入口，两阶段：输入 → 预览编辑 */}
+      <Modal
+        isOpen={showAI}
+        onClose={closeAIModal}
+        title={aiResult ? '整理结果预览' : 'AI 智能整理笔记'}
+      >
+        {pendingDuration > 0 && (
+          <div className="mb-3 px-3 py-2 bg-purple-50 rounded-xl text-xs text-purple-600 flex items-center gap-1.5">
+            <Clock size={13} /> 本次阅读时长 {pendingDuration} 分钟，将自动记录到这条笔记
+          </div>
+        )}
 
-          {/* Note Form Fields */}
+        {!aiResult ? (
+          /* 阶段一：粘贴心得 */
+          <div className="space-y-3">
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-100">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Sparkles size={16} className="text-purple-600" />
+                <span className="text-sm font-medium text-purple-700">把这一章的心得交给我</span>
+              </div>
+              <p className="text-xs text-purple-400 leading-relaxed">
+                随意写下你的感受、印象深刻的内容、联想到的事情，AI 会自动整理成「章节 / 核心观点 / 我的感悟」的结构化笔记。
+              </p>
+            </div>
+            <textarea
+              className="input-field min-h-[160px]"
+              placeholder={`读完《${book.title || '书籍'}》这一章的感受...\n\n可以写：\n· 这一章讲了什么\n· 哪些地方让你印象深刻\n· 你产生的联想和思考`}
+              value={rawText}
+              onChange={e => setRawText(e.target.value)}
+            />
+            {aiError && <p className="text-xs text-red-500">{aiError}</p>}
+            <button
+              onClick={handleAIFormat}
+              disabled={!rawText.trim() || isFormatting}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-purple-500 text-white text-sm font-medium disabled:opacity-50 active:bg-purple-600 transition-colors"
+            >
+              {isFormatting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  AI 正在整理...
+                </>
+              ) : (
+                <>
+                  <Sparkles size={16} /> 开始整理
+                </>
+              )}
+            </button>
+          </div>
+        ) : (
+          /* 阶段二：预览并编辑整理结果 */
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-green-500 flex items-center gap-1">
+                <Sparkles size={13} /> AI 已整理完成，可编辑后保存
+              </span>
+              <button onClick={resetAIFlow} className="text-xs text-purple-500 underline">重新整理</button>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-600 mb-1 block">章节</label>
+              <input
+                className="input-field"
+                placeholder="如：第一章 开端"
+                value={noteForm.chapter}
+                onChange={e => setNoteForm({ ...noteForm, chapter: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-600 mb-1 block flex items-center gap-1">
+                <Lightbulb size={14} className="text-blue-500" /> 核心观点
+              </label>
+              <textarea
+                className="input-field"
+                placeholder="本章的核心观点和重要内容..."
+                rows={3}
+                value={noteForm.keyPoints}
+                onChange={e => setNoteForm({ ...noteForm, keyPoints: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-600 mb-1 block flex items-center gap-1">
+                <Heart size={14} className="text-green-500" /> 我的感悟
+              </label>
+              <textarea
+                className="input-field"
+                placeholder="你的思考、联想和感悟..."
+                rows={3}
+                value={noteForm.reflection}
+                onChange={e => setNoteForm({ ...noteForm, reflection: e.target.value })}
+              />
+            </div>
+            <button onClick={() => saveNote(pendingDuration)} className="btn-primary w-full">保存笔记</button>
+          </div>
+        )}
+      </Modal>
+
+      {/* 手动写笔记 Modal */}
+      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="手动写笔记">
+        <div className="space-y-3">
           <div>
             <label className="text-sm font-medium text-gray-600 mb-1 block">章节</label>
             <input
               className="input-field"
               placeholder="如：第一章 开端"
               value={noteForm.chapter}
-              onChange={e => setNoteForm({...noteForm, chapter: e.target.value})}
+              onChange={e => setNoteForm({ ...noteForm, chapter: e.target.value })}
             />
           </div>
           <div>
@@ -297,7 +383,7 @@ export default function BookDetail() {
               placeholder="本章的核心观点和重要内容..."
               rows={3}
               value={noteForm.keyPoints}
-              onChange={e => setNoteForm({...noteForm, keyPoints: e.target.value})}
+              onChange={e => setNoteForm({ ...noteForm, keyPoints: e.target.value })}
             />
           </div>
           <div>
@@ -307,10 +393,10 @@ export default function BookDetail() {
               placeholder="你的思考、联想和感悟..."
               rows={3}
               value={noteForm.reflection}
-              onChange={e => setNoteForm({...noteForm, reflection: e.target.value})}
+              onChange={e => setNoteForm({ ...noteForm, reflection: e.target.value })}
             />
           </div>
-          <button onClick={() => addNote(0)} className="btn-primary w-full">保存笔记</button>
+          <button onClick={() => saveNote(0)} className="btn-primary w-full">保存笔记</button>
         </div>
       </Modal>
     </div>

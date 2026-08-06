@@ -103,43 +103,83 @@ ${rawText}`;
 }
 
 // Rule-based fallback (no API key needed)
+// 更智能地分离「核心观点（客观陈述）」与「我的感悟（主观感受）」
 function formatWithRules(rawText: string, bookTitle: string): Response {
   const text = rawText.trim();
 
-  // Extract chapter info
-  const chapterPatterns = ['第.*章', '第.*节', 'Chapter', '章节'];
+  // 1. 提取章节信息
+  const chapterPatterns = [
+    /第[一二三四五六七八九十百千零\d]+[章节回卷]/,
+    /Chapter\s+\d+/i,
+    /第\s*\d+\s*[章节]/,
+  ];
   let chapter = '阅读笔记';
   for (const pat of chapterPatterns) {
-    const m = text.match(new RegExp(pat));
+    const m = text.match(pat);
     if (m) {
       const idx = text.indexOf(m[0]);
-      chapter = text.slice(idx, idx + Math.min(m[0].length + 10, 30)).replace(/[，,。.].*/, '');
+      chapter = text.slice(idx, idx + Math.min(m[0].length + 12, 24)).replace(/[，,。.、\n].*/, '').trim();
       break;
     }
   }
 
-  // Split into paragraphs for key points and reflection
-  const paragraphs = text
-    .split(/\n+|。\s*/)
+  // 2. 拆分成句子
+  const sentences = text
+    .split(/\n+|。|！|？|；|！|；|\.\s/)
     .map(s => s.trim())
-    .filter(s => s.length > 5);
+    .filter(s => s.length > 4);
 
-  // First half as key points, second half as reflection
-  const mid = Math.ceil(paragraphs.length / 2);
-  const keyPointCandidates = paragraphs.slice(0, mid);
-  const reflectionCandidates = paragraphs.slice(mid);
+  // 3. 主观感受标记词 —— 出现则归入「我的感悟」
+  const subjectiveWords = [
+    '我', '觉得', '感觉', '感受', '想到', '让我', '使我', '令我',
+    '认为', '感悟', '启发', '印象', '触动', '想起', '联想', '思考',
+    '体会', '深有感触', '让我想到', '不禁', '忍不住', '感悟到',
+    '体会到', '意识到', '发现', '原来', '其实我觉得', '个人认为',
+  ];
+  // 客观陈述标记词 —— 出现则归入「核心观点」
+  const objectiveWords = [
+    '提出', '说明', '指出', '强调', '核心', '关键', '主要', '重要',
+    '概念', '理论', '方法', '原则', '观点', '作者', '书中', '本章',
+    '讲', '介绍', '阐述', '分析', '讨论', '揭示', '表明', '认为',
+    '是', '在于', '通过', '需要', '应该', '可以',
+  ];
 
-  // Deduplicate and clean key points
-  const keyPoints = keyPointCandidates
-    .filter((p, i, arr) => arr.indexOf(p) === i)
-    .map(p => p.length > 3 && !p.endsWith('。') ? p + '。' : p)
-    .join('\n');
+  const keyPointList: string[] = [];
+  const reflectionList: string[] = [];
 
-  const reflection = reflectionCandidates.join('。\n');
+  for (const s of sentences) {
+    const isSubjective = subjectiveWords.some(w => s.includes(w));
+    const isObjective = objectiveWords.some(w => s.includes(w));
+    if (isSubjective && !isObjective) {
+      reflectionList.push(s);
+    } else if (isObjective && !isSubjective) {
+      keyPointList.push(s);
+    } else if (isSubjective && isObjective) {
+      // 两者都命中：含「我」优先归感悟，否则归观点
+      /我|觉得|感受|感悟/.test(s) ? reflectionList.push(s) : keyPointList.push(s);
+    } else {
+      // 都没命中：短句归观点，长句且无明显人称归观点；默认归观点
+      keyPointList.push(s);
+    }
+  }
 
-  return Response.json({
-    chapter,
-    keyPoints: keyPoints || text.slice(0, 300),
-    reflection: reflection || text,
-  });
+  // 4. 兜底：如果某一类为空，按数量比例分配
+  if (keyPointList.length === 0 && reflectionList.length > 0) {
+    const mid = Math.ceil(reflectionList.length / 2);
+    keyPointList.push(...reflectionList.splice(mid));
+  } else if (reflectionList.length === 0 && keyPointList.length > 1) {
+    const mid = Math.ceil(keyPointList.length / 2);
+    reflectionList.push(...keyPointList.splice(mid));
+  }
+
+  const clean = (arr: string[]) =>
+    arr
+      .filter((p, i, a) => a.indexOf(p) === i)
+      .map(p => (p.length > 3 && !/[。！？]$/.test(p) ? p + '。' : p))
+      .join('\n');
+
+  const keyPoints = clean(keyPointList) || text.slice(0, 300);
+  const reflection = clean(reflectionList) || '';
+
+  return Response.json({ chapter, keyPoints, reflection });
 }

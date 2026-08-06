@@ -10,7 +10,11 @@ import EmptyState from '../components/EmptyState';
 
 export default function Reading() {
   const navigate = useNavigate();
-  const books = useLiveQuery(() => db.books.orderBy('startDate').reverse().toArray()) || [];
+  const books = useLiveQuery(async () => {
+    // books 表未对 startDate 建索引，不能用 orderBy('startDate')，否则 Dexie 抛 SchemaError 白屏
+    const all = await db.books.toArray();
+    return all.sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''));
+  }) || [];
   const notes = useLiveQuery(() => db.readingNotes.orderBy('date').reverse().toArray()) || [];
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ title: '', author: '', totalPages: '' });
