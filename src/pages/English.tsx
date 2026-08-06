@@ -137,7 +137,12 @@ export default function English() {
       </div>
 
       {/* Add Record Modal */}
-      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="添加学习记录">
+      <Modal
+        isOpen={showAdd}
+        onClose={() => setShowAdd(false)}
+        title="添加学习记录"
+        footer={<button onClick={addRecord} className="btn-primary w-full">保存记录</button>}
+      >
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium text-gray-600 mb-1 block">学习类型</label>
@@ -167,7 +172,6 @@ export default function English() {
             <label className="text-sm font-medium text-gray-600 mb-1 block">备注</label>
             <textarea className="input-field" value={notes} onChange={e => setNotes(e.target.value)} placeholder="学习内容、心得..." rows={2} />
           </div>
-          <button onClick={addRecord} className="btn-primary w-full">保存记录</button>
         </div>
       </Modal>
     </div>

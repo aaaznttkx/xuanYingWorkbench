@@ -236,7 +236,12 @@ export default function Sports() {
       </div>
 
       {/* Add Modal */}
-      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="运动打卡">
+      <Modal
+        isOpen={showAdd}
+        onClose={() => setShowAdd(false)}
+        title="运动打卡"
+        footer={<button onClick={addRecord} className="btn-primary w-full">完成打卡</button>}
+      >
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium text-gray-600 mb-2 block">运动项目</label>
@@ -267,7 +272,6 @@ export default function Sports() {
             <label className="text-sm font-medium text-gray-600 mb-1 block">备注（可选）</label>
             <input className="input-field" value={form.note} onChange={e => setForm({...form, note: e.target.value})} placeholder="心情、感受..." />
           </div>
-          <button onClick={addRecord} className="btn-primary w-full">完成打卡</button>
         </div>
       </Modal>
     </div>

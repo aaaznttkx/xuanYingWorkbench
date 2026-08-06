@@ -26,7 +26,7 @@ export default function Modal({ isOpen, onClose, title, children, footer }: Moda
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-t-3xl sm:rounded-3xl w-full sm:max-w-[420px] max-h-[90dvh] flex flex-col animate-slide-up overflow-hidden">
+      <div className="relative bg-white rounded-t-3xl sm:rounded-3xl w-full sm:max-w-[420px] modal-max-height flex flex-col animate-slide-up overflow-hidden">
         {/* 标题栏：固定顶部，不随内容滚动 */}
         <div className="flex items-center justify-between p-5 pb-3 flex-shrink-0 border-b border-gray-50">
           <h2 className="text-lg font-semibold text-gray-800">{title}</h2>

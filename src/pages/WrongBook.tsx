@@ -166,7 +166,12 @@ export default function WrongBook() {
         </div>
       )}
 
-      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="添加错题">
+      <Modal
+        isOpen={showAdd}
+        onClose={() => setShowAdd(false)}
+        title="添加错题"
+        footer={<button onClick={addQuestion} className="btn-primary w-full">添加错题</button>}
+      >
         <div className="space-y-3">
           <div>
             <label className="text-sm font-medium text-gray-600 mb-1 block">类型</label>
@@ -184,7 +189,6 @@ export default function WrongBook() {
           <input className="input-field" placeholder="你的答案" value={form.myAnswer} onChange={e => setForm({...form, myAnswer: e.target.value})} />
           <input className="input-field" placeholder="正确答案 *" value={form.answer} onChange={e => setForm({...form, answer: e.target.value})} />
           <textarea className="input-field" placeholder="解析（可选）" value={form.analysis} onChange={e => setForm({...form, analysis: e.target.value})} rows={2} />
-          <button onClick={addQuestion} className="btn-primary w-full">添加错题</button>
         </div>
       </Modal>
     </div>

@@ -127,3 +127,9 @@ textarea.input-field {
 .animate-slide-up {
   animation: slideUp 0.4s ease-out;
 }
+
+/* 弹窗最大高度：vh 作为兜底，dvh 支持时覆盖（动态适应移动端地址栏） */
+.modal-max-height {
+  max-height: 85vh;
+  max-height: 85dvh;
+}

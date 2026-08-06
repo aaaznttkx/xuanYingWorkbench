@@ -208,13 +208,17 @@ export default function Vocabulary() {
         </div>
       )}
 
-      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="添加生词">
+      <Modal
+        isOpen={showAdd}
+        onClose={() => setShowAdd(false)}
+        title="添加生词"
+        footer={<button onClick={addWord} className="btn-primary w-full">添加</button>}
+      >
         <div className="space-y-3">
           <input className="input-field" placeholder="单词 *" value={newWord.word} onChange={e => setNewWord({...newWord, word: e.target.value})} />
           <input className="input-field" placeholder="音标" value={newWord.phonetic} onChange={e => setNewWord({...newWord, phonetic: e.target.value})} />
           <input className="input-field" placeholder="释义 *" value={newWord.meaning} onChange={e => setNewWord({...newWord, meaning: e.target.value})} />
           <input className="input-field" placeholder="例句（可选）" value={newWord.example} onChange={e => setNewWord({...newWord, example: e.target.value})} />
-          <button onClick={addWord} className="btn-primary w-full">添加</button>
         </div>
       </Modal>
     </div>

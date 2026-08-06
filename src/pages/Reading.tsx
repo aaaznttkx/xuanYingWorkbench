@@ -146,7 +146,12 @@ export default function Reading() {
       )}
 
       {/* Add Book Modal */}
-      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="添加书籍">
+      <Modal
+        isOpen={showAdd}
+        onClose={() => setShowAdd(false)}
+        title="添加书籍"
+        footer={<button onClick={addBookFn} className="btn-primary w-full">添加</button>}
+      >
         <div className="space-y-3">
           <input
             className="input-field"
@@ -167,7 +172,6 @@ export default function Reading() {
             value={form.totalPages}
             onChange={e => setForm({...form, totalPages: e.target.value})}
           />
-          <button onClick={addBookFn} className="btn-primary w-full">添加</button>
         </div>
       </Modal>
     </div>
