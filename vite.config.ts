@@ -8,6 +8,13 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
+      workbox: {
+        // 新版本 service worker 立即激活并接管页面，清理旧预缓存
+        // 配合 vercel.json 的 sw.js no-cache 头，确保用户能检测到并加载新代码
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+      },
       manifest: {
         name: '玄英拾光',
         short_name: '玄英拾光',
