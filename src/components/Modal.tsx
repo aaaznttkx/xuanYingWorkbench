@@ -23,21 +23,40 @@ export default function Modal({ isOpen, onClose, title, children, footer }: Moda
 
   if (!isOpen) return null;
 
+  // 关键布局用内联样式：内联样式在 JS bundle 里，不受独立 CSS 文件缓存影响，保证各浏览器一致生效。
+  // maxHeight 用 85vh（所有浏览器支持）；flex 列布局让标题固定、内容滚动、footer 固定底部。
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      style={{ WebkitOverflowScrolling: 'touch' }}
+    >
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-t-3xl sm:rounded-3xl w-full sm:max-w-[420px] modal-max-height flex flex-col animate-slide-up overflow-hidden">
+      <div
+        className="relative bg-white rounded-t-3xl sm:rounded-3xl w-full sm:max-w-[420px] animate-slide-up"
+        style={{
+          maxHeight: '85vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
         {/* 标题栏：固定顶部，不随内容滚动 */}
-        <div className="flex items-center justify-between p-5 pb-3 flex-shrink-0 border-b border-gray-50">
+        <div
+          className="flex items-center justify-between p-5 pb-3 border-b border-gray-50"
+          style={{ flexShrink: 0 }}
+        >
           <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
           <button onClick={onClose} className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center active:bg-gray-100">
             <X size={18} className="text-gray-500" />
           </button>
         </div>
-        {/* 内容区：独立滚动。min-h-0 是关键——让 flex 子项可收缩，overflow-y-auto 才会生效 */}
+        {/* 内容区：独立滚动。minHeight:0 让 flex 子项可收缩，overflowY:auto 才会生效 */}
         <div
-          className="flex-1 min-h-0 overflow-y-auto px-5 pt-4"
+          className="px-5 pt-4"
           style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'auto',
             WebkitOverflowScrolling: 'touch',
             paddingBottom: footer ? '1rem' : 'calc(1.25rem + env(safe-area-inset-bottom))',
           }}
@@ -47,8 +66,8 @@ export default function Modal({ isOpen, onClose, title, children, footer }: Moda
         {/* 底部操作区：固定底部，主操作按钮始终可见可点，带安全区避免被 home indicator 遮挡 */}
         {footer && (
           <div
-            className="flex-shrink-0 px-5 pt-3 border-t border-gray-50 bg-white"
-            style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+            className="px-5 pt-3 border-t border-gray-50 bg-white"
+            style={{ flexShrink: 0, paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
           >
             {footer}
           </div>
